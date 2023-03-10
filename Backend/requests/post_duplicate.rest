@@ -1,0 +1,17 @@
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+  "name": "Christopher Mintz-Plasse",
+  "number": "01-47-87441"
+}
+
+###
+
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+  "name": "Christopher Mintz-Plasse",
+  "number": "01-47-87441"
+}
