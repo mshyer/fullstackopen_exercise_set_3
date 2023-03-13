@@ -1,7 +1,13 @@
 const express = require('express');
+require('dotenv').config();
+
 const app = express();
 const morgan = require('morgan')
 const cors = require('cors');
+
+const Entry = require('./models/entry')
+// const PORT = process.env.port;
+// const Entry = require('./mongo');
 
 // const PORT = 3001;
 
@@ -47,11 +53,16 @@ const requestLogger = (request, response, next) => {
   console.log('Body:  ', request.body)
   console.log('---')
   next();
-}
+};
 
 const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: 'unknown endpoint' })
-}
+};
+
+const errorHandler = (error, request, response, next) => {
+  console.log(error.message);
+  next(error);
+};
 
 
 
@@ -108,41 +119,64 @@ app.use(morgan(function (tokens, req, res) {
 }))
 
 app.get('/api/persons', (request, response) => {
-  response.json(phonebook);
+  // response.json(phonebook);
+  Entry.find({}).then(entries => {
+    response.json(entries);
+  })
 });
 
 app.get('/info', (request, response) => {
-  const num_entries = phonebook.length;
-  const time = new Date();
-  const entriesHTML = `<p>Phonebook has ${num_entries} entries</p>`
-  const br = '<br />'
-  const timeHTML = `<p>${time.toString()}</p>`
-  response.send(entriesHTML + br + timeHTML)
+  Entry.find({}).then(entries => {
+    const time = new Date();
+    const num_entries = entries.length;
+    const entriesHTML = `<p>Phonebook has ${num_entries} entries</p>`
+    const br = '<br />'
+    const timeHTML = `<p>${time.toString()}</p>`
+    response.send(entriesHTML + br + timeHTML)
+  })
 });
 
 app.get('/api/persons/:id', (request, response) => {
-  const id = request.params.id;
-  let entry = phonebook.find(entry => entry.id === Number(id));
-  if (!entry) {
-    console.log('no entry');
-    response.status(404).end();
-  } else {
-    response.status(200).json(entry);
-  }
+  // const id = request.params.id;
+  // let entry = phonebook.find(entry => entry.id === Number(id));
+  // if (!entry) {
+  //   console.log('no entry');
+  //   response.status(404).end();
+  // } else {
+  //   response.status(200).json(entry);
+  // }
+
+  Entry.find({_id: request.params.id}).then(entry => {
+    if (entry.length > 0) {
+      response.status(200).json(entry);
+    } else {
+      console.log('no entry');
+      response.status(404).end();
+    }
+  })
 });
 
 app.delete('/api/persons/:id', (request, response) => {
-  const id = request.params.id;
-  let entry = phonebook.find(entry => entry.id === Number(id));
-  if (entry) {
-    phonebook = phonebook.filter(entry => entry.id !== Number(id))
+  // const id = request.params.id;
+  // let entry = phonebook.find(entry => entry.id === Number(id));
+  // if (entry) {
+  //   phonebook = phonebook.filter(entry => entry.id !== Number(id))
+  //   response.status(204);
+  //   response.end();
+  // } else {
+  //   console.log('no entry found to delete')
+  //   response.status(404);
+  //   response.end();
+  // }
+  Entry.deleteOne({ _id: request.params.id }).then(success => {
     response.status(204);
     response.end();
-  } else {
-    console.log('no entry found to delete')
+  }).catch(error => {
+    console.log('no entry found to delete');
     response.status(404);
     response.end();
-  }
+  })
+  
 });
 
 const generateRandId = function() {
@@ -160,43 +194,65 @@ app.post('/api/persons', (request, response) => {
   if (!name || !number) {
     response.status(404);
     response.send({ error: 'phonebook entry must contain name and number' });
-  } else if (phonebook.find(entry => entry.name === name)) {
+  } 
+  // else if (phonebook.find(entry => entry.name === name)) {
+  //   response.status(404);
+  //   response.send({ error: 'phonebook entry name must be unique' });
+  // } else {
+  //   const id = generateRandId();
+  //   const entry = { id, name, number };
+  //   phonebook = phonebook.concat(entry);
+  //   console.log('message from the console')
+  //   response.status(204);
+  //   response.end();
+  // }
+  const entry = new Entry({ name, number });
+  entry.save().then(saved => {
+    response.status(200);
+    response.send(entry);
+  }).catch(err => {
+    console.log('failed to add phonebook entry')
     response.status(404);
-    response.send({ error: 'phonebook entry name must be unique' });
-  } else {
-    const id = generateRandId();
-    const entry = { id, name, number };
-    phonebook = phonebook.concat(entry);
-    console.log('message from the console')
-    response.status(204);
     response.end();
-  }
+  })
+
 
 });
 
 app.put('/api/persons/:id', (request, response) => {
   const name = request.body.name;
   const number = request.body.number;
-  const id = Number(request.params.id);
+  const id = request.params.id;
   if (!name || !number) {
     response.status(404);
     response.send({ error: 'failed to update due to bad name' });
-  } else if (!phonebook.find(entry => entry.name === name)) {
-    response.status(404);
-    response.send({ error: 'failed to update due to no contact found' });
-  } else {
-    const updateData = { id, name, number };
-    phonebook = phonebook.filter(entry => entry.id !== id);
-    phonebook = phonebook.concat(updateData)
-    console.log('message from put')
+  } 
+  // else if (!phonebook.find(entry => entry.name === name)) {
+  //   response.status(404);
+  //   response.send({ error: 'failed to update due to no contact found' });
+  // } else {
+    const updateData = { name, number };
+    // phonebook = phonebook.filter(entry => entry.id !== id);
+    // phonebook = phonebook.concat(updateData)
+    // console.log('message from put')
     // console.log('phonebook :>> ', phonebook);
-    response.status(204);
+    // response.status(204);
+    // response.end();
+  // }
+  Entry.updateOne( { _id: id }, updateData ).then(result => {
+    console.log('Updated ' + name);
+    response.status(200);
+    response.send(result);
+  }).catch(err => {
+    console.log('error updating entry' + name);
+    response.status(404);
     response.end();
-  }
+  })
 
 });
 
 app.use(unknownEndpoint)
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

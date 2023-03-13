@@ -32,13 +32,12 @@ if (name && number) {
     number,
   });  
   entry.save().then(result => {
-    console.log('phonebook entry saved');
+    console.log(`phonebook entry saved for ${name}: ${number}`);
     mongoose.connection.close();
   });
 } else {
-  console.log('firing')
   Entry.find({}).then(result => { //finds all the entries
-    console.log(result);
+    console.log('phonebook:')
     result.forEach( entry => {
       console.log(entry)
     })
