@@ -61,6 +61,9 @@ const unknownEndpoint = (request, response) => {
 
 const errorHandler = (error, request, response, next) => {
   console.log(error.message);
+  if (error.name === 'ValidationError') {
+    return response.status(400).json( {error: error.message});
+  }
   next(error);
 };
 
@@ -188,7 +191,7 @@ const generateRandId = function() {
   }
 };
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
   const name = request.body.name;
   const number = request.body.number;
   if (!name || !number) {
@@ -212,8 +215,9 @@ app.post('/api/persons', (request, response) => {
     response.send(entry);
   }).catch(err => {
     console.log('failed to add phonebook entry')
-    response.status(404);
-    response.end();
+    // response.status(404);
+    // response.end();
+    next(err);
   })
 
 
